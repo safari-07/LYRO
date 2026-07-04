@@ -7,6 +7,7 @@ import Batches from "@/pages/Batches";
 import BatchDetail from "@/pages/BatchDetail";
 import MarksEntry from "@/pages/MarksEntry";
 import StudentProfile from "@/pages/StudentProfile";
+import Settings from "@/pages/Settings";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -67,6 +68,14 @@ function App() {
               element={
                 <Protected>
                   <StudentProfile />
+                </Protected>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <Protected>
+                  <Settings />
                 </Protected>
               }
             />

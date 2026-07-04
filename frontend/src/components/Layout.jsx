@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { House, SignOut, GraduationCap } from "@phosphor-icons/react";
+import { House, SignOut, GraduationCap, Gear } from "@phosphor-icons/react";
 
 export default function Layout({ children }) {
   const { center, logout } = useAuth();
@@ -42,6 +42,15 @@ export default function Layout({ children }) {
                 <House size={16} weight="bold" /> Batches
               </button>
             )}
+            <button
+              data-testid="header-settings-link"
+              onClick={() => navigate("/settings")}
+              className="lyro-btn-ghost"
+              title="Settings"
+            >
+              <Gear size={16} weight="bold" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
             {center && (
               <div className="hidden md:flex flex-col items-end leading-tight">
                 <span className="text-xs font-bold text-[#18181B]" data-testid="center-name">

@@ -391,6 +391,41 @@ export default function StudentProfile() {
               Pick a month and generate a report to share.
             </div>
           )}
+          {monthReport?.payment?.configured && monthReport?.payment?.qr_url && (
+            <div
+              className="mt-4 border border-[#E4E4E7] p-4 flex flex-col sm:flex-row gap-4 items-center"
+              data-testid="monthly-report-qr-block"
+            >
+              <img
+                src={monthReport.payment.qr_url}
+                alt="Payment QR"
+                className="w-28 h-28 object-contain border border-[#E4E4E7] p-1 bg-white"
+                data-testid="monthly-report-qr-image"
+              />
+              <div className="text-sm text-center sm:text-left">
+                <p className="lyro-eyebrow">Attach this QR to the parent</p>
+                <p className="font-display font-bold text-lg mt-1">
+                  {monthReport.payment.payee_name || "Your center"}
+                </p>
+                {monthReport.payment.upi_id && (
+                  <p className="font-mono text-xs text-[#71717A]">
+                    {monthReport.payment.upi_id}
+                  </p>
+                )}
+                <div className="flex gap-2 mt-2 justify-center sm:justify-start">
+                  <a
+                    href={monthReport.payment.qr_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="lyro-btn-secondary"
+                    data-testid="open-qr-image-button"
+                  >
+                    Open QR image
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2 mt-4">
             <button
               data-testid="generate-monthly-report-button"

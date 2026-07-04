@@ -1,4 +1,5 @@
 """LYRO backend — FastAPI + MongoDB."""
+import base64
 import logging
 import os
 import uuid
@@ -7,7 +8,8 @@ from pathlib import Path
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field
 from starlette.middleware.cors import CORSMiddleware
@@ -25,6 +27,11 @@ from ai_service import (  # noqa: E402
     generate_monthly_report,
     generate_parent_message,
     generate_progress_summary,
+)
+from payment_utils import (  # noqa: E402
+    decode_uploaded_qr,
+    is_valid_upi_id,
+    qr_png_from_upi,
 )
 from syllabus_data import COURSE_SYLLABI, COURSES  # noqa: E402
 
@@ -139,6 +146,12 @@ class MarksBulkIn(BaseModel):
     marks: List[MarkIn]
 
 
+class PaymentSettingsIn(BaseModel):
+    upi_id: Optional[str] = None
+    payee_name: Optional[str] = None
+    qr_image_base64: Optional[str] = None  # data URL or raw b64; None = leave unchanged; "" = clear
+
+
 @api.post("/auth/register")
 async def register(data: RegisterIn):
     existing = await db.users.find_one({"email": data.email.lower()})
@@ -191,6 +204,117 @@ async def me(user=Depends(get_current_user)):
 @api.get("/syllabus/courses")
 async def list_courses():
     return {"courses": COURSES}
+
+
+# ---------- payment settings ----------
+def _payment_public(center: dict) -> dict:
+    settings = center.get("payment_settings") or {}
+    upi = settings.get("upi_id")
+    payee = settings.get("payee_name") or center.get("name")
+    has_image = bool(settings.get("qr_image_b64"))
+    configured = bool(upi or has_image)
+    return {
+        "upi_id": upi,
+        "payee_name": payee,
+        "has_qr_image": has_image,
+        "configured": configured,
+    }
+
+
+def _payment_qr_url(request: Request, center: dict) -> Optional[str]:
+    settings = center.get("payment_settings") or {}
+    if not (settings.get("upi_id") or settings.get("qr_image_b64")):
+        return None
+    version = settings.get("updated_at") or center.get("id")
+    version_hash = str(hash(version))[-6:]
+    # Respect reverse-proxy headers so the URL parents receive is public/https
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    if forwarded_host:
+        scheme = forwarded_proto or ("https" if request.url.scheme == "https" else "http")
+        base = f"{scheme}://{forwarded_host}"
+    else:
+        base = str(request.base_url).rstrip("/")
+    return f"{base}/api/centers/{center['id']}/payment-qr.png?v={version_hash}"
+
+
+@api.get("/settings/payment")
+async def get_payment_settings(request: Request, user=Depends(get_current_user)):
+    center = await _get_or_create_center(user)
+    info = _payment_public(center)
+    info["qr_url"] = _payment_qr_url(request, center)
+    return info
+
+
+@api.post("/settings/payment")
+async def save_payment_settings(
+    request: Request,
+    data: PaymentSettingsIn,
+    user=Depends(get_current_user),
+):
+    center = await _get_or_create_center(user)
+    current = dict(center.get("payment_settings") or {})
+
+    if data.upi_id is not None:
+        cleaned = data.upi_id.strip()
+        if cleaned and not is_valid_upi_id(cleaned):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid UPI ID. Expected format: name@bank",
+            )
+        current["upi_id"] = cleaned or None
+
+    if data.payee_name is not None:
+        current["payee_name"] = data.payee_name.strip() or None
+
+    if data.qr_image_base64 is not None:
+        if data.qr_image_base64 == "":
+            current["qr_image_b64"] = None
+        else:
+            try:
+                raw = decode_uploaded_qr(data.qr_image_base64)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Invalid QR image data")
+            if len(raw) > 1_500_000:
+                raise HTTPException(
+                    status_code=400,
+                    detail="QR image too large (max ~1.5 MB)",
+                )
+            current["qr_image_b64"] = base64.b64encode(raw).decode()
+
+    current["updated_at"] = now_iso()
+    await db.centers.update_one(
+        {"id": center["id"]}, {"$set": {"payment_settings": current}}
+    )
+    center["payment_settings"] = current
+    info = _payment_public(center)
+    info["qr_url"] = _payment_qr_url(request, center)
+    return info
+
+
+@api.get("/centers/{center_id}/payment-qr.png")
+async def payment_qr_png(center_id: str):
+    """Public: anyone with the link can view the QR (it's just a UPI QR)."""
+    center = await db.centers.find_one({"id": center_id}, {"_id": 0})
+    if not center:
+        raise HTTPException(status_code=404, detail="Center not found")
+    settings = center.get("payment_settings") or {}
+    if settings.get("qr_image_b64"):
+        try:
+            png = base64.b64decode(settings["qr_image_b64"])
+        except Exception:
+            raise HTTPException(status_code=500, detail="Bad QR image data")
+    elif settings.get("upi_id"):
+        png = qr_png_from_upi(
+            settings["upi_id"], settings.get("payee_name") or center.get("name")
+        )
+    else:
+        raise HTTPException(status_code=404, detail="No payment QR configured")
+    return Response(
+        content=png,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 @api.get("/syllabus/{course}")
@@ -517,19 +641,27 @@ async def parent_message(student_id: str, user=Depends(get_current_user)):
 
 @api.post("/students/{student_id}/monthly-report")
 async def monthly_report(
-    student_id: str, month: Optional[str] = None, user=Depends(get_current_user)
+    request: Request,
+    student_id: str,
+    month: Optional[str] = None,
+    user=Depends(get_current_user),
 ):
     s = await _student_for_user(student_id, user)
     batch = await db.batches.find_one({"id": s["batch_id"]}, {"_id": 0})
+    center = await db.centers.find_one({"id": batch["center_id"]}, {"_id": 0})
     history = await _student_history(student_id, s["batch_id"])
     if not month:
         month = datetime.now(timezone.utc).strftime("%Y-%m")
+    payment_info = _payment_public(center)
+    payment_info["qr_url"] = _payment_qr_url(request, center)
     filtered = [h for h in history if h["date"].startswith(month)]
     if not filtered:
+        base_report = f"No test scores recorded for {s['name']} in {month}."
         return {
-            "report": f"No test scores recorded for {s['name']} in {month}.",
+            "report": _append_payment_footer(base_report, payment_info),
             "period": month,
             "parent_whatsapp": s["parent_whatsapp"],
+            "payment": payment_info,
         }
     rank, batch_size, _ = await _batch_rank(s["batch_id"], student_id)
     payload = {
@@ -543,7 +675,25 @@ async def monthly_report(
         "trend_note": _trend_note(history),
     }
     report = await generate_monthly_report(payload)
-    return {"report": report, "period": month, "parent_whatsapp": s["parent_whatsapp"]}
+    return {
+        "report": _append_payment_footer(report, payment_info),
+        "period": month,
+        "parent_whatsapp": s["parent_whatsapp"],
+        "payment": payment_info,
+    }
+
+
+def _append_payment_footer(report_text: str, payment_info: dict) -> str:
+    if not payment_info.get("configured"):
+        return report_text
+    lines = ["", "— — —", "To pay this month's fees:"]
+    if payment_info.get("upi_id"):
+        lines.append(f"UPI ID: {payment_info['upi_id']}")
+    if payment_info.get("payee_name"):
+        lines.append(f"Payee: {payment_info['payee_name']}")
+    if payment_info.get("qr_url"):
+        lines.append(f"Scan QR: {payment_info['qr_url']}")
+    return report_text.rstrip() + "\n" + "\n".join(lines)
 
 
 @api.get("/batches/{batch_id}/dashboard")
