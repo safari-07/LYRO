@@ -24,22 +24,25 @@ create batch → add students → enter marks → view AI progress → share wit
 - Students CRUD (name + parent WhatsApp + optional course override)
 - Tests CRUD (name, subject, chapter, max_marks, date)
 - Fast marks grid: keyboard-jump (Enter / ↑ ↓), bulk save, upsert semantics
+- **CSV import**: paste or upload Name,Score — matched/unmatched/bad-score preview → populate grid → save
 - Student profile: line chart (Recharts) + history table + rank
 - Batch dashboard: class avg, top performers, at-risk (>15% drop), full ranking
 - AI endpoints: `/progress-summary`, `/parent-message`, `/monthly-report` (Claude Sonnet 4.5)
 - Copy-to-clipboard + WhatsApp deep links (`wa.me/<phone>?text=…`)
-- Curated JEE syllabus (Physics/Chemistry/Maths + chapters). NEET/NDA/Boards = empty containers
+- **Curated syllabi**: JEE (62 chapters), NEET (82), NDA (34), Boards CBSE Class 12 (88)
 
-### Payment QR (added same day)
+### Payment QR (same-day)
 - Settings page: enter UPI ID or upload own QR image
 - Auto-generated UPI QR via `qrcode[pil]` (fallback when no image uploaded)
 - Public PNG endpoint `/api/centers/{id}/payment-qr.png`
 - Monthly report auto-appends footer with UPI ID + QR URL
 - Monthly Report card in UI displays the QR alongside the report so teacher can share it
+- Settings UX: preview + clear buttons unmount instantly after clear-all / remove-image
 
 ### Testing
 - iteration_1: 100% pass (backend 27/27, frontend E2E happy path)
-- iteration_2: Payment QR backend 15/15 pass; Settings page UI verified via screenshot
+- iteration_2: Payment QR backend 15/15 pass; Settings page UI verified
+- iteration_3: Syllabi + CSV import + Settings polish → 100% backend (45/45) & frontend
 
 ## Data model (MongoDB collections)
 users, centers (+ payment_settings sub-doc), batches, students, tests, marks
@@ -49,9 +52,7 @@ Payments processing/tracking, attendance, timetables, student/parent login,
 automated WhatsApp API, multi-branch, roles/permissions.
 
 ## Backlog (P1)
-- Populate NEET / NDA / Boards syllabi (containers exist; data pending)
-- Add data-testid on batch → students tab hyperlink for smoother QA automation
-- Refresh preview instantly after `Clear all` in Settings (minor UX polish)
+- (Nothing critical — core P1 items shipped in iteration_3)
 
 ## Backlog (P2)
 - CSV import/export of marks
