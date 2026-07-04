@@ -1,4 +1,5 @@
 """LYRO backend — FastAPI + MongoDB."""
+import asyncio
 import base64
 import logging
 import os
@@ -694,6 +695,90 @@ def _append_payment_footer(report_text: str, payment_info: dict) -> str:
     if payment_info.get("qr_url"):
         lines.append(f"Scan QR: {payment_info['qr_url']}")
     return report_text.rstrip() + "\n" + "\n".join(lines)
+
+
+@api.post("/batches/{batch_id}/monthly-digest")
+async def batch_monthly_digest(
+    request: Request,
+    batch_id: str,
+    month: Optional[str] = None,
+    user=Depends(get_current_user),
+):
+    """Generate parent-ready monthly messages for every student in the batch, in parallel."""
+    batch = await _batch_for_user(batch_id, user)
+    center = await db.centers.find_one({"id": batch["center_id"]}, {"_id": 0})
+    students = await db.students.find(
+        {"batch_id": batch_id}, {"_id": 0}
+    ).sort("name", 1).to_list(1000)
+    if not month:
+        month = datetime.now(timezone.utc).strftime("%Y-%m")
+    payment_info = _payment_public(center)
+    payment_info["qr_url"] = _payment_qr_url(request, center)
+
+    async def _one(student):
+        history = await _student_history(student["id"], batch_id)
+        filtered = [h for h in history if h["date"].startswith(month)]
+        if not filtered:
+            return {
+                "student_id": student["id"],
+                "name": student["name"],
+                "parent_whatsapp": student["parent_whatsapp"],
+                "has_marks": False,
+                "message": _append_payment_footer(
+                    f"No test scores recorded for {student['name']} in {month}.",
+                    payment_info,
+                ),
+            }
+        rank, batch_size, _ = await _batch_rank(batch_id, student["id"])
+        payload = {
+            "student_name": student["name"],
+            "course": student.get("course_override") or batch["course"],
+            "batch_name": batch["name"],
+            "rank": rank,
+            "batch_size": batch_size,
+            "tests": list(reversed(filtered)),
+            "period": month,
+            "trend_note": _trend_note(history),
+        }
+        try:
+            msg = await generate_monthly_report(payload)
+        except Exception as e:
+            logger.exception("digest gen failed for %s: %s", student["name"], e)
+            msg = f"Monthly report for {student['name']} — unable to generate right now."
+        return {
+            "student_id": student["id"],
+            "name": student["name"],
+            "parent_whatsapp": student["parent_whatsapp"],
+            "has_marks": True,
+            "message": _append_payment_footer(msg, payment_info),
+        }
+
+    if not students:
+        return {
+            "batch": batch,
+            "period": month,
+            "count": 0,
+            "with_marks": 0,
+            "items": [],
+            "payment": payment_info,
+        }
+
+    # Bound concurrency to avoid slamming the LLM
+    sem = asyncio.Semaphore(4)
+
+    async def _guarded(s):
+        async with sem:
+            return await _one(s)
+
+    items = await asyncio.gather(*[_guarded(s) for s in students])
+    return {
+        "batch": batch,
+        "period": month,
+        "count": len(items),
+        "with_marks": sum(1 for i in items if i["has_marks"]),
+        "items": items,
+        "payment": payment_info,
+    }
 
 
 @api.get("/batches/{batch_id}/dashboard")

@@ -1,0 +1,37 @@
+{
+  "summary": "LYRO iteration_4 verification: both P2 items shipped PASS. (A) Backend POST /api/batches/{batch_id}/monthly-digest — 12/12 new pytest cases green (default-month, 2025-12 happy path with 2 items, payment footer 'UPI ID: ankit@lyro.in' + 'Scan QR: https://...' appended to every message including the 'no marks' fallback, empty-month fallback text 'No test scores recorded for {name} in {month}.', 401 without token, 404 for foreign/nonexistent batch, empty-batch returns count=0 items=[] with no crash, parallelism smoke: 4-student batch with marks finished in ~30-45s well under 60s ceiling, confirming semaphore=4 concurrency). Payment settings had been cleared by test_payment.py teardown — restored to ankit@lyro.in for iteration_4. (B) PWA — /manifest.json returns valid JSON with name='LYRO — Marks, Progress & Parent Updates', short_name='LYRO', display='standalone', theme_color='#0A2540', icons include 192x192 + a purpose='maskable' 512 icon. /logo192.png, /logo512.png return 200 image/png with non-zero bodies. /service-worker.js returns 200 with cache handler. Served index HTML contains <link rel='manifest'>, <meta name='theme-color' content='#0A2540'>, <link rel='apple-touch-icon' href='.../logo192.png'>, <title>LYRO — Marks · Progress · Parents</title>, viewport-fit=cover. (C) Frontend Playwright — MonthlyDigestModal E2E: batch b1ace071 dashboard open-digest-button enabled → click opens digest-modal → default digest-month-input matches current month (2026-07) → change to 2025-12 → generate → 2 digest-row-* rendered within 90s, each containing 'UPI ID: ankit@lyro.in' + 'Scan QR:' footer, digest-copy-* + digest-whatsapp-* buttons present, digest-copy-all-button visible in footer since count>0 → regenerate with month=2026-07 shows fallback 'No test scores recorded' → digest-close-button dismisses modal. Empty batch (beta, 0 students) — open-digest-button correctly disabled. Regression: 45/45 existing backend pytest cases still green. Total 57/57 backend tests, 100% frontend UI checks pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_monthly_digest.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_payment.py",
+    "/app/test_reports/pytest/digest_results.xml",
+    "/app/test_reports/pytest/regression_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: /app/backend/tests/test_payment.py fresh_owner fixture teardown clears the demo owner's payment_settings (upi_id='', payee_name='', qr_image_base64=''). This means running the full backend suite leaves the demo owner with unconfigured payment, which breaks the digest payment-footer flow for subsequent UI runs. Consider restoring the demo owner UPI to ankit@lyro.in in that teardown, or gating the clear on a dedicated non-demo test account. Iteration_4 manually restored payment before Playwright ran.",
+    "OPTIONAL: MonthlyDigestModal loading placeholder shows 'Takes ~5s per student. Fetching in parallel.' — actual observed latency on the demo LLM is ~10-15s per student; consider updating the copy or removing the estimate."
+  ],
+  "critical_code_review_comments": [
+    "batch_monthly_digest correctly uses asyncio.Semaphore(4) to bound concurrent LLM calls — verified 4-student batch completes concurrently (~30-45s wall time). Good.",
+    "Each item.message always goes through _append_payment_footer(...) — including the 'no marks' fallback — so parents receive UPI/QR even in months without tests. Consistent with the intent.",
+    "batch_monthly_digest catches per-student generate_monthly_report exceptions and falls back to 'Monthly report for {name} — unable to generate right now.' — good resilience; one failing LLM call won't fail the whole batch.",
+    "Frontend MonthlyDigestModal opens with new Date().toISOString().slice(0,7) which is UTC-based. For a teacher in IST at 22:00-23:59 on the last day of the month, this could default to the following month. Minor edge case; users can change month before clicking Generate.",
+    "The <div className='fixed inset-0 ...' onClick={onClose}> uses stopPropagation on the inner card — clicking backdrop dismisses. This is fine but the digest-modal wrapper is the backdrop; a Playwright click on data-testid='digest-modal' would trigger close. Not a bug but worth documenting the testid semantics.",
+    "MonthlyDigestModal is defined inline inside /app/frontend/src/pages/BatchDetail.jsx (file now 1041 lines, past the 700-line ceiling). Extract MonthlyDigestModal into /app/frontend/src/components/MonthlyDigestModal.jsx to improve maintainability. Same holds for other tab components in this file.",
+    "shareWhatsApp opens window.open in a new tab with wa.me URL — no way for automated tests to assert the URL without intercepting window.open. Consider also exposing the built URL as a data-* attribute on the button for testability (e.g., data-wa-url).",
+    "service-worker.js caches '/index.html' + shell files but uses a network-first policy for navigations — good for fast update propagation. Registration is gated to production build in /app/frontend/src/index.js so dev doesn't cache aggressively. Correct.",
+    "manifest.json declares icons as 'any' and one 'maskable' — meets Chrome PWA install criteria. start_url='/' and scope='/' are correct for SPA."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_monthly_digest.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "owner@lyro.demo / demo1234. Payment settings restored to upi_id=ankit@lyro.in / payee_name='LYRO Demo Coaching' after tests. has_qr_image=false (no QR PNG uploaded); qr_url is still generated pointing at the QR endpoint.",
+  "seed_data_creation": "Reused TEST_UI_Seed batch b1ace071-094f-4f09-a1c5-b64d7ba271f8 (2 students Aarav Kumar/Priya Sharma with December 2025 marks — untouched). During test_digest_empty_batch_no_crash and test_digest_parallelism_4_students created ephemeral TEST_EmptyDigest_* and TEST_Parallel_* batches and cleaned them up in the finally block. No orphan test data left behind.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New tests live at /app/backend/tests/test_monthly_digest.py (12 tests: 7 digest + 5 PWA static). Runs under 60s via pytest-xdist. When running the FULL backend suite (pytest /app/backend/tests/), test_payment.py teardown clears demo owner's payment settings — either run test_monthly_digest.py after re-setting payment via POST /api/settings/payment {upi_id:'ankit@lyro.in',payee_name:'LYRO Demo Coaching'} or run the digest file standalone. Playwright frontend digest E2E requires payment to be configured or the UPI/QR footer assertions will fail. To verify the WhatsApp share URL programmatically (playwright can't easily assert window.open target), main agent may want to expose the wa.me URL as a data-attribute for future automated tests.",
+  "rca_of_issues": "Non-issue but documented: first frontend Playwright pass failed the UPI-footer assertion because the demo owner's payment settings had been cleared by test_payment.py's cleanup fixture during the earlier regression run. Setting payment back to ankit@lyro.in via POST /api/settings/payment made the subsequent digest response include 'UPI ID: ankit@lyro.in' + 'Scan QR: https://...' in every message as expected. Fix is env-only (restore payment) — production code path is correct."
+}

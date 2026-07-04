@@ -21,3 +21,12 @@ root.render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+// Register service worker (enables Add-to-Home-Screen)
+if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/service-worker.js")
+      .catch(() => {});
+  });
+}

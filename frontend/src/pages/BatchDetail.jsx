@@ -14,6 +14,11 @@ import {
   ArrowRight,
   PencilSimpleLine,
   UserCircle,
+  Sparkle,
+  WhatsappLogo,
+  Copy,
+  X,
+  Calendar,
 } from "@phosphor-icons/react";
 
 const TABS = ["dashboard", "students", "tests"];
@@ -143,6 +148,7 @@ export default function BatchDetail() {
 /* ---------- Dashboard tab ---------- */
 function DashboardTab({ dashboard, batchId, onGoStudents, onGoTests }) {
   const navigate = useNavigate();
+  const [digestOpen, setDigestOpen] = useState(false);
   if (!dashboard) return <p className="text-sm text-[#71717A]">Loading...</p>;
   const {
     class_average,
@@ -157,6 +163,25 @@ function DashboardTab({ dashboard, batchId, onGoStudents, onGoTests }) {
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="lyro-eyebrow">Batch overview</p>
+        <button
+          data-testid="open-digest-button"
+          onClick={() => setDigestOpen(true)}
+          disabled={student_count === 0}
+          className="lyro-btn-primary"
+        >
+          <Sparkle size={14} weight="bold" /> Send monthly digest
+        </button>
+      </div>
+
+      {digestOpen && (
+        <MonthlyDigestModal
+          batchId={batchId}
+          onClose={() => setDigestOpen(false)}
+        />
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           label="Students"
@@ -793,6 +818,223 @@ function TestsTab({ batchId, tests, reload, syllabus }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+
+/* ---------- Monthly digest modal ---------- */
+function MonthlyDigestModal({ batchId, onClose }) {
+  const [month, setMonth] = useState(() =>
+    new Date().toISOString().slice(0, 7),
+  );
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+
+  const generate = async () => {
+    setLoading(true);
+    setData(null);
+    try {
+      const r = await api.post(
+        `/batches/${batchId}/monthly-digest?month=${month}`,
+      );
+      setData(r.data);
+      toast.success(
+        `Generated ${r.data.count} message${r.data.count === 1 ? "" : "s"}`,
+      );
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Failed to generate digest");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copy = async (text, id) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch {
+      toast.error("Copy failed — long-press to copy");
+    }
+  };
+
+  const shareWhatsApp = (text, phone) => {
+    const cleaned = (phone || "").replace(/[^\d]/g, "");
+    const url = cleaned
+      ? `https://wa.me/${cleaned}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 overflow-y-auto"
+      data-testid="digest-modal"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white border border-[#0A2540] w-full max-w-4xl my-8 flex flex-col max-h-[85vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-[#E4E4E7] flex items-start justify-between shrink-0">
+          <div>
+            <p className="lyro-eyebrow">Monthly digest</p>
+            <h2 className="font-display font-black text-2xl mt-1 tracking-tight">
+              One tap to update every parent
+            </h2>
+            <p className="text-xs text-[#71717A] mt-2 max-w-xl">
+              Generates an AI-written monthly report for each student in this
+              batch. Payment QR (if set) is included automatically. Copy or
+              share each message to the parent&apos;s WhatsApp.
+            </p>
+          </div>
+          <button
+            data-testid="digest-close-button"
+            onClick={onClose}
+            className="text-[#71717A] hover:text-[#0A2540]"
+          >
+            <X size={20} weight="bold" />
+          </button>
+        </div>
+
+        <div className="p-6 border-b border-[#E4E4E7] flex flex-wrap items-end gap-3 shrink-0">
+          <div>
+            <label className="lyro-label">Month</label>
+            <input
+              data-testid="digest-month-input"
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="lyro-input max-w-[180px]"
+            />
+          </div>
+          <button
+            data-testid="digest-generate-button"
+            onClick={generate}
+            disabled={loading}
+            className="lyro-btn-primary"
+          >
+            <Sparkle size={14} weight="bold" />
+            {loading ? "Generating..." : data ? "Regenerate" : "Generate"}
+          </button>
+          {data && (
+            <div className="text-xs text-[#71717A] ml-auto">
+              <span className="font-bold text-[#18181B]">{data.with_marks}</span>{" "}
+              of <span className="font-bold text-[#18181B]">{data.count}</span>{" "}
+              students have marks in this month
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {loading && (
+            <div className="text-center py-10">
+              <Sparkle
+                size={28}
+                weight="bold"
+                color="#0A2540"
+                className="animate-pulse mx-auto"
+              />
+              <p className="text-sm text-[#71717A] mt-3">
+                Writing personalised messages for the whole batch...
+              </p>
+              <p className="text-[11px] text-[#A1A1AA] mt-1">
+                Takes ~5s per student. Fetching in parallel.
+              </p>
+            </div>
+          )}
+          {!loading && !data && (
+            <div className="text-center py-10">
+              <Calendar
+                size={40}
+                weight="bold"
+                color="#A1A1AA"
+                className="mx-auto"
+              />
+              <p className="text-sm text-[#71717A] mt-3">
+                Pick a month and click Generate.
+              </p>
+            </div>
+          )}
+          {!loading && data && data.items.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-sm text-[#71717A]">
+                No students in this batch yet.
+              </p>
+            </div>
+          )}
+          {!loading &&
+            data &&
+            data.items.map((item) => (
+              <div
+                key={item.student_id}
+                data-testid={`digest-row-${item.student_id}`}
+                className={`border p-4 ${item.has_marks ? "border-[#E4E4E7]" : "border-[#F4F4F5] bg-[#FAFAFA]"}`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                  <div>
+                    <p className="font-display font-bold text-lg leading-tight">
+                      {item.name}
+                    </p>
+                    <p className="text-xs font-mono text-[#71717A] mt-0.5">
+                      {item.parent_whatsapp}
+                    </p>
+                  </div>
+                  {!item.has_marks && (
+                    <span className="lyro-badge">no marks this month</span>
+                  )}
+                </div>
+                <div
+                  className={`text-sm whitespace-pre-wrap ${item.has_marks ? "text-[#18181B]" : "text-[#71717A]"} bg-[#F4F4F5] p-3 border-l-4 ${item.has_marks ? "border-[#0A2540]" : "border-[#E4E4E7]"}`}
+                >
+                  {item.message}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    data-testid={`digest-copy-${item.student_id}`}
+                    onClick={() => copy(item.message, item.student_id)}
+                    className="lyro-btn-secondary"
+                  >
+                    <Copy size={13} weight="bold" />
+                    {copiedId === item.student_id ? "Copied!" : "Copy"}
+                  </button>
+                  <button
+                    data-testid={`digest-whatsapp-${item.student_id}`}
+                    onClick={() =>
+                      shareWhatsApp(item.message, item.parent_whatsapp)
+                    }
+                    className="lyro-btn-whatsapp"
+                  >
+                    <WhatsappLogo size={13} weight="bold" /> Send on WhatsApp
+                  </button>
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {data && data.count > 0 && (
+          <div className="p-4 border-t border-[#E4E4E7] flex justify-end shrink-0">
+            <button
+              data-testid="digest-copy-all-button"
+              onClick={() => {
+                const combined = data.items
+                  .map(
+                    (i) =>
+                      `To: ${i.name} (${i.parent_whatsapp})\n\n${i.message}`,
+                  )
+                  .join("\n\n────────────────────\n\n");
+                copy(combined, "all");
+                toast.success("All messages copied");
+              }}
+              className="lyro-btn-secondary"
+            >
+              <Copy size={13} weight="bold" /> Copy all messages
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

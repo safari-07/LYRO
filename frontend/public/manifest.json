@@ -1,0 +1,32 @@
+{
+  "name": "LYRO — Marks, Progress & Parent Updates",
+  "short_name": "LYRO",
+  "description": "AI-powered marks tracking and parent communication for coaching centers.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F4F5",
+  "theme_color": "#0A2540",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo512-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}
