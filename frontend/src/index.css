@@ -2,74 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-    margin: 0;
-    font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-        sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-    font-family:
-        source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
-}
+/* --- Fonts: Cabinet Grotesk (Fontshare) + Manrope (Google) --- */
+@import url("https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
 @layer base {
     :root {
         --background: 0 0% 100%;
-        --foreground: 0 0% 3.9%;
+        --foreground: 240 10% 10%;
         --card: 0 0% 100%;
-        --card-foreground: 0 0% 3.9%;
+        --card-foreground: 240 10% 10%;
         --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 3.9%;
-        --primary: 0 0% 9%;
-        --primary-foreground: 0 0% 98%;
-        --secondary: 0 0% 96.1%;
-        --secondary-foreground: 0 0% 9%;
-        --muted: 0 0% 96.1%;
-        --muted-foreground: 0 0% 45.1%;
-        --accent: 0 0% 96.1%;
-        --accent-foreground: 0 0% 9%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 89.8%;
-        --input: 0 0% 89.8%;
-        --ring: 0 0% 3.9%;
-        --chart-1: 12 76% 61%;
-        --chart-2: 173 58% 39%;
-        --chart-3: 197 37% 24%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 27 87% 67%;
-        --radius: 0.5rem;
-    }
-    .dark {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 0 0% 14.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 14.9%;
-        --muted-foreground: 0 0% 63.9%;
-        --accent: 0 0% 14.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
-        --chart-1: 220 70% 50%;
-        --chart-2: 160 60% 45%;
-        --chart-3: 30 80% 55%;
-        --chart-4: 280 65% 60%;
-        --chart-5: 340 75% 55%;
+        --popover-foreground: 240 10% 10%;
+        --primary: 214 82% 15%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 240 5% 96%;
+        --secondary-foreground: 240 10% 10%;
+        --muted: 240 5% 96%;
+        --muted-foreground: 240 4% 46%;
+        --accent: 240 5% 96%;
+        --accent-foreground: 240 10% 10%;
+        --destructive: 0 74% 50%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 240 6% 90%;
+        --input: 240 6% 90%;
+        --ring: 214 82% 15%;
+        --chart-1: 214 82% 15%;
+        --chart-2: 158 64% 40%;
+        --chart-3: 30 90% 50%;
+        --chart-4: 0 74% 50%;
+        --chart-5: 265 70% 55%;
+        --radius: 0rem;
     }
 }
 
@@ -77,39 +40,108 @@ code {
     * {
         @apply border-border;
     }
+    html,
     body {
-        @apply bg-background text-foreground;
+        margin: 0;
+        font-family:
+            "Manrope",
+            ui-sans-serif,
+            system-ui,
+            -apple-system,
+            sans-serif;
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    h1,
+    h2,
+    h3,
+    h4,
+    .font-display {
+        font-family:
+            "Cabinet Grotesk", "Manrope", ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: -0.02em;
+    }
+    input,
+    button,
+    select,
+    textarea {
+        font-family: inherit;
     }
 }
 
-@layer base {
-    [data-debug-wrapper="true"] {
-        display: contents !important;
+@layer components {
+    .lyro-container {
+        @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
     }
+    .lyro-card {
+        @apply bg-white border border-[#E4E4E7] rounded-none transition-shadow;
+    }
+    .lyro-card-interactive:hover {
+        box-shadow: 4px 4px 0 0 #0a2540;
+        transform: translate(-1px, -1px);
+        transition: all 200ms ease-out;
+    }
+    .lyro-btn-primary {
+        @apply inline-flex items-center justify-center gap-2 bg-[#0A2540] text-white hover:bg-[#1E3A8A] transition-colors rounded-none px-5 py-2.5 font-bold text-sm uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+    .lyro-btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 bg-white border border-[#0A2540] text-[#0A2540] hover:bg-[#F4F4F5] transition-colors rounded-none px-5 py-2.5 font-bold text-sm uppercase tracking-wider disabled:opacity-50;
+    }
+    .lyro-btn-whatsapp {
+        @apply inline-flex items-center justify-center gap-2 bg-[#25D366] text-white hover:bg-[#1DA851] transition-colors rounded-none px-5 py-2.5 font-bold text-sm uppercase tracking-wider;
+    }
+    .lyro-btn-ghost {
+        @apply inline-flex items-center justify-center gap-2 bg-transparent text-[#0A2540] hover:bg-[#F4F4F5] transition-colors rounded-none px-4 py-2 font-semibold text-sm;
+    }
+    .lyro-btn-danger {
+        @apply inline-flex items-center justify-center gap-2 bg-white border border-[#DC2626] text-[#DC2626] hover:bg-[#FEF2F2] transition-colors rounded-none px-4 py-2 font-bold text-xs uppercase tracking-wider;
+    }
+    .lyro-input {
+        @apply w-full border border-[#E4E4E7] bg-white rounded-none px-3 py-2.5 text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:ring-2 focus:ring-[#0A2540] focus:border-transparent transition-all text-sm;
+    }
+    .lyro-label {
+        @apply text-xs font-bold uppercase tracking-[0.2em] text-[#71717A] mb-1.5 block;
+    }
+    .lyro-badge {
+        @apply inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border border-[#E4E4E7] bg-[#F4F4F5] text-[#18181B];
+    }
+    .lyro-badge-danger {
+        @apply inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border border-[#DC2626] bg-[#FEF2F2] text-[#DC2626];
+    }
+    .lyro-badge-success {
+        @apply inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border border-[#166534] bg-[#F0FDF4] text-[#166534];
+    }
+    .lyro-table {
+        @apply w-full text-sm border-collapse;
+    }
+    .lyro-table thead th {
+        @apply bg-[#F4F4F5] text-[#71717A] text-[10px] font-bold uppercase tracking-[0.2em] py-3 px-4 border-b border-[#E4E4E7] text-left;
+    }
+    .lyro-table tbody td {
+        @apply py-3 px-4 border-b border-[#E4E4E7] text-[#18181B];
+    }
+    .lyro-eyebrow {
+        @apply text-[11px] font-bold uppercase tracking-[0.25em] text-[#71717A];
+    }
+}
 
-    [data-debug-wrapper="true"] > * {
-        margin-left: inherit;
-        margin-right: inherit;
-        margin-top: inherit;
-        margin-bottom: inherit;
-        padding-left: inherit;
-        padding-right: inherit;
-        padding-top: inherit;
-        padding-bottom: inherit;
-        column-gap: inherit;
-        row-gap: inherit;
-        gap: inherit;
-        border-left-width: inherit;
-        border-right-width: inherit;
-        border-top-width: inherit;
-        border-bottom-width: inherit;
-        border-left-style: inherit;
-        border-right-style: inherit;
-        border-top-style: inherit;
-        border-bottom-style: inherit;
-        border-left-color: inherit;
-        border-right-color: inherit;
-        border-top-color: inherit;
-        border-bottom-color: inherit;
+/* Prevent iOS input zoom */
+@media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
     }
+}
+
+/* Nice grain overlay on hero */
+.lyro-grain {
+    background-image:
+        linear-gradient(#0a25400d 1px, transparent 1px),
+        linear-gradient(90deg, #0a25400d 1px, transparent 1px);
+    background-size:
+        32px 32px,
+        32px 32px;
 }
