@@ -95,11 +95,39 @@ class TestSyllabus:
         assert set(subj) == {"Physics", "Chemistry", "Mathematics"}
         assert len(subj["Physics"]) > 0
         assert "name" in subj["Physics"][0]
+        total_chapters = sum(len(v) for v in subj.values())
+        assert total_chapters >= 60, f"JEE expected 60+ chapters, got {total_chapters}"
 
-    def test_neet_empty(self):
+    def test_neet_populated(self):
         r = requests.get(f"{BASE_URL}/api/syllabus/NEET", timeout=30)
         assert r.status_code == 200
-        assert r.json()["subjects"] == []
+        subj = {s["name"]: s["chapters"] for s in r.json()["subjects"]}
+        assert set(subj) == {"Physics", "Chemistry", "Botany", "Zoology"}
+        for name, chapters in subj.items():
+            assert len(chapters) >= 10, f"NEET {name} has only {len(chapters)} chapters"
+            assert "name" in chapters[0] and "priority_weight" in chapters[0]
+        total = sum(len(v) for v in subj.values())
+        assert total > 60, f"NEET expected >60 chapters, got {total}"
+
+    def test_nda_populated(self):
+        r = requests.get(f"{BASE_URL}/api/syllabus/NDA", timeout=30)
+        assert r.status_code == 200
+        subj = {s["name"]: s["chapters"] for s in r.json()["subjects"]}
+        # Must have Mathematics + some English/GAT + some GK/GAT
+        assert "Mathematics" in subj
+        assert any("English" in k for k in subj.keys()), f"Missing English/GAT: {list(subj.keys())}"
+        assert any("General Knowledge" in k or "GK" in k for k in subj.keys()), f"Missing GK: {list(subj.keys())}"
+        for k, v in subj.items():
+            assert len(v) > 0, f"NDA {k} empty"
+
+    def test_boards_populated(self):
+        r = requests.get(f"{BASE_URL}/api/syllabus/Boards", timeout=30)
+        assert r.status_code == 200
+        subj = {s["name"]: s["chapters"] for s in r.json()["subjects"]}
+        required = {"Physics", "Chemistry", "Mathematics", "Biology", "English"}
+        assert required.issubset(set(subj.keys())), f"Boards missing subjects. Got {set(subj.keys())}"
+        for k in required:
+            assert len(subj[k]) > 0, f"Boards {k} has no chapters"
 
     def test_unknown_course(self):
         r = requests.get(f"{BASE_URL}/api/syllabus/FOO", timeout=30)

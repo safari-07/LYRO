@@ -80,8 +80,8 @@ export default function Settings() {
   const clearImage = async () => {
     if (!window.confirm("Remove uploaded QR image?")) return;
     try {
-      const r = await api.post("/settings/payment", { qr_image_base64: "" });
-      setInfo(r.data);
+      await api.post("/settings/payment", { qr_image_base64: "" });
+      await load();
       toast.success("Uploaded QR removed");
     } catch {
       toast.error("Failed");
@@ -91,15 +91,16 @@ export default function Settings() {
   const clearAll = async () => {
     if (!window.confirm("Remove all payment details?")) return;
     try {
-      const r = await api.post("/settings/payment", {
+      await api.post("/settings/payment", {
         upi_id: "",
         payee_name: "",
         qr_image_base64: "",
       });
-      setInfo(r.data);
       setUpiId("");
       setPayeeName("");
       setImgPreview(null);
+      if (fileRef.current) fileRef.current.value = "";
+      await load();
       toast.success("Payment details cleared");
     } catch {
       toast.error("Failed");

@@ -1,0 +1,35 @@
+{
+  "summary": "LYRO iteration_3 verification: all 3 shipped enhancements PASS. (1) Syllabi populated: backend GET /api/syllabus/{JEE,NEET,NDA,Boards} return the expected non-empty subjects/chapters (NEET 4 subjects Physics/Chemistry/Botany/Zoology with 82 chapters, NDA 3 subjects Mathematics/English (GAT)/General Knowledge (GAT), Boards 8 subjects incl. Physics/Chemistry/Mathematics/Biology/English + Accountancy/BusStudies/Economics, JEE unchanged 3 subjects 62 chapters, /api/syllabus/UNKNOWN → 404). Frontend BatchDetail Tests tab shows the correct subject list and chapter dropdown populates for NEET/NDA/Boards. (2) MarksEntry CSV Import: all 5 scenarios pass — happy path (Aarav 72 / Priya 65 → 2 ok → apply → save → persists after reload); mismatch+bad_score (0 ok, 1 unmatched, 1 bad, apply-button correctly disabled); tab-separated Excel-paste (1 ok); header row auto-skipped (1 row parsed, 1 ok); download template triggers marks-template.csv download. (3) Settings UX polish: after Clear-all → payment-qr-preview img AND clear-payment-settings-button both immediately removed from DOM (previous regression fixed). After remove-qr-image-button click with UPI still set → remove-qr-image-button removed from DOM but UPI input value and clear-payment-settings-button remain visible (correct). Backend regression: 45/45 pytest cases green in 29s (auth, syllabus, batches, students, marks, dashboard, student profile, AI summary/parent-msg/monthly-report, cascade deletes, payment QR isolation, monthly-report footer). Frontend smoke: login, batch detail, tests tab, student profile chart+AI section all render.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_payment.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "parseCsvText() header detection uses Number.isNaN(parseFloat(rawScore)) — works because 'Score' parses to NaN; but if a header row were 'name,100' it would be mistaken for data. Current heuristic is fine for typical CSVs.",
+    "CsvImportModal deduplicates by normalized name; if a batch has two students with the exact same normalized name (rare), only the last one wins in the Map. Not a v1 concern but worth noting.",
+    "server.py syllabus router now serves 4 populated courses correctly. COURSE_SYLLABI dict lookup is O(1); no perf concern.",
+    "Settings.jsx clearAll and clearImage both correctly call `await load()` after mutation, which refreshes `info.has_qr_image` / `info.configured` so the remove-qr and clear-all buttons unmount immediately. Fix is clean.",
+    "Remove-qr-image-button is guarded by `info?.has_qr_image && !imgPreview` — this correctly hides the button after clear but also after a fresh upload before save, which is the intended UX.",
+    "MarksEntry.jsx is 526 lines and still readable; if it grows further, extracting CsvImportModal into its own file (/app/frontend/src/components/CsvImportModal.jsx) would improve isolation.",
+    "The CSV import is entirely client-side and reuses POST /api/tests/{id}/marks on save — server-side max_marks validation still catches bad scores that slip past the modal.",
+    "Boards syllabus is very complete (8 subjects incl. Commerce stream). If the app tries to auto-suggest subjects per student stream in future, will need per-stream metadata."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "owner@lyro.demo / demo1234 (seeded). Payment settings restored to upi=ankit@lyro.in after tests.",
+  "seed_data_creation": "Reused existing TEST_UI_Seed batch b1ace071-094f-4f09-a1c5-b64d7ba271f8 with students Aarav Kumar / Priya Sharma and test W1 (73781ac7-7170-4640-bdf3-97b361f800ba). Created & deleted 3 TEST_UI_{course} batches for NEET/NDA/Boards dropdown verification. Batch scores now: Aarav=72, Priya=65 on W1 (from CSV import save).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All syllabus data lives in /app/backend/syllabus_data.py (JEE_SYLLABUS, NEET_SYLLABUS, NDA_SYLLABUS, BOARDS_SYLLABUS, COURSE_SYLLABI). Backend syllabus tests updated in backend_test.py (test_neet_populated / test_nda_populated / test_boards_populated replace old test_neet_empty). Payment QR restore endpoint: POST /api/settings/payment {upi_id, payee_name, qr_image_base64}. If retesting CSV import, use existing test 73781ac7 in batch b1ace071 or create fresh batch+students. Playwright dialogs auto-accepted via page.on('dialog', ...). Iteration_2 flagged Settings preview lingering — CONFIRMED FIXED this iteration.",
+  "rca_of_issues": "No new issues found. Prior iteration_2 regression (payment-qr-preview persisting after clear) is fixed via explicit `await load()` calls in clearAll() and clearImage() in Settings.jsx, which re-fetches info.configured / info.has_qr_image so the conditional renders unmount the img and buttons."
+}
