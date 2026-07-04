@@ -1,0 +1,73 @@
+{
+  "theme": "light",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "colors": {
+    "background": "#FFFFFF",
+    "surface_subtle": "#F4F4F5",
+    "primary": "#0A2540",
+    "primary_hover": "#1E3A8A",
+    "text_main": "#18181B",
+    "text_muted": "#71717A",
+    "accent_danger": "#DC2626",
+    "accent_danger_bg": "#FEF2F2",
+    "border": "#E4E4E7",
+    "whatsapp_green": "#25D366"
+  },
+  "typography": {
+    "headings": "Cabinet Grotesk",
+    "body": "Manrope",
+    "scale": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tight text-[#18181B]",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight text-[#18181B]",
+      "h3": "text-xl sm:text-2xl font-bold tracking-tight text-[#18181B]",
+      "body": "text-base leading-relaxed text-[#18181B]",
+      "small": "text-sm text-[#71717A]",
+      "label": "text-xs font-bold uppercase tracking-[0.2em] text-[#71717A]"
+    }
+  },
+  "layout": {
+    "strategy": "Mode B: The Control Room Grid (For Dashboards/Analytics)",
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "grid": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6",
+    "spacing": "Use p-6 or p-8 for internal container padding to prevent text collision."
+  },
+  "components": {
+    "card": "bg-white border border-[#E4E4E7] rounded-none shadow-none hover:shadow-[4px_4px_0px_0px_rgba(10,37,64,1)] transition-all duration-200",
+    "button_primary": "bg-[#0A2540] text-white hover:bg-[#1E3A8A] transition-colors rounded-none px-6 py-2 font-bold",
+    "button_secondary": "bg-transparent border border-[#0A2540] text-[#0A2540] hover:bg-[#F4F4F5] transition-colors rounded-none px-6 py-2 font-bold",
+    "button_whatsapp": "bg-[#25D366] text-white hover:bg-[#1DA851] transition-colors rounded-none px-6 py-2 font-bold inline-flex items-center gap-2",
+    "input": "border border-[#E4E4E7] bg-white rounded-none px-4 py-2 focus:ring-2 focus:ring-[#0A2540] focus:border-transparent transition-all",
+    "table": "w-full text-left border-collapse text-sm",
+    "table_header": "bg-[#F4F4F5] text-[#71717A] text-xs font-bold uppercase tracking-[0.2em] py-3 px-4 border-b border-[#E4E4E7]",
+    "table_cell": "py-3 px-4 border-b border-[#E4E4E7] text-[#18181B]"
+  },
+  "motion": {
+    "hover": "transition-transform duration-200 ease-out",
+    "fade_in": "animate-in fade-in duration-300",
+    "slide_up": "animate-in slide-in-from-bottom-4 duration-300"
+  },
+  "media": {
+    "logo": "https://images.pexels.com/photos/5477692/pexels-photo-5477692.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "empty_state_image": "https://images.pexels.com/photos/8251117/pexels-photo-8251117.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+  },
+  "key_screens": {
+    "auth": "Centered minimalist card on a subtle 10% grey background, emphasizing security, authority, and trust. Use sharp edges.",
+    "dashboard": "Control Room Grid. Top-left metric: Class Average. Top-right: Quick actions. Middle: 'At Risk' list highlighted with #DC2626 border/text.",
+    "marks_entry": "Dense data table, full width. Input fields should be minimal (border-b only or subtle box) to allow rapid keyboard navigation. Sticky headers for long student lists.",
+    "student_profile": "Two-column layout. Left: Line chart (Recharts) showing marks trend. Right: AI-generated progress summary with a prominent 'Share to WhatsApp' button.",
+    "parent_update": "Dialog/Modal containing the generated AI message with 'Copy' and 'WhatsApp' action buttons."
+  },
+  "instructions_to_main_agent": [
+    "CRITICAL: All interactive and key informational elements MUST include a data-testid attribute (kebab-case, role-based).",
+    "Use Shadcn components for complex UI (tables, dropdowns, dialogs) but customize them heavily by removing rounded corners (rounded-none) to fit the Swiss Brutalist/High-Contrast archetype.",
+    "Implement Recharts for the Student Profile marks over time line chart.",
+    "The Marks Entry grid is the most used screen: it must be keyboard friendly, dense, and allow fast tabbing between inputs.",
+    "Students falling behind (>15% drop) MUST be highlighted in Red (#DC2626) on the Batch Dashboard. This is a critical business requirement.",
+    "For icons, install and use @phosphor-icons/react (e.g., yarn add @phosphor-icons/react) for dense dashboard clarity.",
+    "Use Cabinet Grotesk for headings and Manrope for body text. Do NOT use Inter for headings.",
+    "No full-screen gradients. Keep backgrounds solid White (#FFFFFF) or 10% Grey (#F4F4F5).",
+    "Ensure the 'Share to WhatsApp' action is touch-friendly and uses the brand color #25D366.",
+    "For the Marks Entry fast grid, optimize the Shadcn Table component to ensure it stretches to full container height with sticky headers.",
+    "Add 'backdrop-blur-xl bg-white/70' to any sticky top navigation to maintain the 'Crystal Glass' effect if content scrolls under it."
+  ]
+}
